@@ -1,0 +1,13 @@
+# Core Dependencies
+fastapi
+uvicorn
+google-generativeai
+python-dotenv
+pydantic
+aiohttp
+requests
+
+# Development & Testing
+pytest
+pytest-asyncio
+pytest-cov

@@ -1,0 +1,234 @@
+# ═══════════════════════════════════════════════════════════════
+# ContextGuard — Lobster Trap DPI Policy
+# Owner: Tayyab
+# SRS Reference: F2 — Lobster Trap DPI Layer
+#
+# Rule evaluation: first-match-wins (highest priority first)
+# Actions: ALLOW, DENY, LOG, QUARANTINE, HUMAN_REVIEW, RATE_LIMIT
+# ═══════════════════════════════════════════════════════════════
+
+version: "1.0"
+policy_name: "contextguard-policy"
+
+default_action: ALLOW
+
+# ──────────────────────────────────────────────────────────────
+# INGRESS RULES — Applied to incoming prompts from AI agents
+# ──────────────────────────────────────────────────────────────
+ingress_rules:
+
+  # Rule 1: CREDENTIAL EXFILTRATION → QUARANTINE + LOG
+  # SRS: credential-exfiltration detection (CRITICAL severity)
+  # Catches: API keys, secrets, bearer tokens, database passwords,
+  #          connection strings, private keys in prompts
+  - name: credential_exfiltration
+    description: "Prompt attempts to read, transmit, or exfiltrate credentials or secrets"
+    priority: 100
+    action: QUARANTINE
+    conditions:
+      - field: contains_credentials
+        match_type: boolean
+        value: true
+
+  # Rule 1b: DATA EXFILTRATION → QUARANTINE + LOG
+  # Catches: prompts that try to send data to external servers
+  - name: data_exfiltration
+    description: "Prompt contains data exfiltration patterns — sending data to external endpoints"
+    priority: 98
+    action: QUARANTINE
+    conditions:
+      - field: contains_exfiltration
+        match_type: boolean
+        value: true
+
+  # Rule 2: PROMPT INJECTION → DENY + LOG
+  # SRS: prompt-injection detection (HIGH severity)
+  # Catches: "ignore previous instructions", "you are now",
+  #          "jailbreak", "DAN mode", role override attempts
+  - name: prompt_injection
+    description: "Detected prompt injection attempt — override of system instructions"
+    priority: 95
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Blocked: prompt injection detected. This attempt has been logged and reported."
+    conditions:
+      - field: contains_injection_patterns
+        match_type: boolean
+        value: true
+
+  # Rule 2b: ROLE IMPERSONATION → DENY + LOG
+  # Catches: "pretend you are", "act as root", etc.
+  - name: role_impersonation
+    description: "Prompt attempts to assign a privileged role identity to the model"
+    priority: 93
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Blocked: role impersonation attempt detected."
+    conditions:
+      - field: contains_role_impersonation
+        match_type: boolean
+        value: true
+
+  # Rule 3: PII DETECTION → LOG (allow but alert)
+  # SRS: pii-detection (MEDIUM severity)
+  # Catches: SSNs, email addresses, phone numbers in prompts
+  - name: pii_detection
+    description: "Personal identifiable information detected in prompt — logged and alerted"
+    priority: 80
+    action: LOG
+    conditions:
+      - field: contains_pii
+        match_type: boolean
+        value: true
+
+  # Rule 3b: PII REQUEST → LOG
+  # Catches: prompts asking the model to generate/provide PII
+  - name: pii_request
+    description: "Prompt is requesting personal or sensitive information"
+    priority: 78
+    action: LOG
+    conditions:
+      - field: contains_pii_request
+        match_type: boolean
+        value: true
+
+  # Rule 4: MALWARE REQUESTS → DENY
+  - name: block_malware
+    description: "Prompt requests creation of malware, exploits, or offensive tools"
+    priority: 96
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Blocked: malware/exploit generation request detected."
+    conditions:
+      - field: contains_malware_request
+        match_type: boolean
+        value: true
+
+  # Rule 5: SENSITIVE PATH ACCESS → DENY
+  - name: block_sensitive_paths
+    description: "Prompt targets sensitive system paths like /etc/shadow, .ssh, .env"
+    priority: 85
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Blocked: access to sensitive system paths denied."
+    conditions:
+      - field: contains_sensitive_paths
+        match_type: boolean
+        value: true
+
+  # Rule 6: DANGEROUS SYSTEM COMMANDS → DENY
+  - name: block_dangerous_commands
+    description: "Dangerous system commands detected — rm -rf, curl|bash, sudo, etc."
+    priority: 82
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Blocked: dangerous system command detected."
+    conditions:
+      - field: contains_system_commands
+        match_type: boolean
+        value: true
+
+  # Rule 6b: INTENT MISMATCH → HUMAN_REVIEW (SRS policy pack)
+  # Proxy flags intent_category vs declared header; backend confirms with Gemini.
+  - name: intent_mismatch
+    description: "Declared agent intent differs from detected intent — requires human review"
+    priority: 75
+    action: HUMAN_REVIEW
+    conditions:
+      - field: intent_mismatch
+        match_type: boolean
+        value: true
+
+  # Rule 6c: RATE LIMIT ANOMALY → RATE_LIMIT (SRS policy pack)
+  - name: rate_limit_anomaly
+    description: "Call volume exceeds rolling baseline threshold"
+    priority: 72
+    action: RATE_LIMIT
+    conditions:
+      - field: rate_limit_exceeded
+        match_type: boolean
+        value: true
+
+  # Rule 7: HIGH RISK SCORE → HUMAN_REVIEW
+  - name: high_risk_review
+    description: "High risk score requires human review"
+    priority: 70
+    action: HUMAN_REVIEW
+    conditions:
+      - field: risk_score
+        match_type: threshold
+        value: 0.6
+
+  # Rule 8: LOG CODE EXECUTION
+  - name: log_code_execution
+    description: "Log code execution requests for audit trail"
+    priority: 30
+    action: LOG
+    conditions:
+      - field: intent_category
+        match_type: exact
+        value: "code_execution"
+
+# ──────────────────────────────────────────────────────────────
+# EGRESS RULES — Applied to model responses (output filtering)
+# ──────────────────────────────────────────────────────────────
+egress_rules:
+
+  # Egress Rule 1: BLOCK CREDENTIAL LEAKS IN OUTPUT
+  - name: block_credential_leak
+    description: "Model output contains credentials — API keys, tokens, passwords"
+    priority: 100
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Output blocked: response contains credentials that were redacted for security."
+    conditions:
+      - field: contains_credentials
+        match_type: boolean
+        value: true
+
+  # Egress Rule 2: BLOCK PII LEAKS IN OUTPUT
+  - name: block_pii_leak
+    description: "Model output contains PII — SSNs, emails, phone numbers"
+    priority: 90
+    action: DENY
+    deny_message: "[CONTEXTGUARD] Output blocked: response contains personally identifiable information."
+    conditions:
+      - field: contains_pii
+        match_type: boolean
+        value: true
+
+# ──────────────────────────────────────────────────────────────
+# RATE LIMITS
+# ──────────────────────────────────────────────────────────────
+rate_limits:
+  requests_per_minute: 120
+  requests_per_hour: 2000
+  burst_threshold: 30
+
+# ──────────────────────────────────────────────────────────────
+# NETWORK POLICY
+# ──────────────────────────────────────────────────────────────
+network:
+  egress_policy: allowlist
+  allowed_domains:
+    - "api.openai.com"
+    - "api.anthropic.com"
+    - "api.aimlapi.com"
+    - "generativelanguage.googleapis.com"
+  denied_domains:
+    - "*.onion"
+    - "pastebin.com"
+    - "hastebin.com"
+
+# ──────────────────────────────────────────────────────────────
+# FILESYSTEM POLICY
+# ──────────────────────────────────────────────────────────────
+filesystem:
+  denied_paths:
+    - "/etc/**"
+    - "/root/**"
+    - "**/.ssh/**"
+    - "**/.env"
+    - "**/*secret*"
+    - "**/*password*"
+    - "**/*credential*"
+  allowed_read_paths:
+    - "/home/*/documents/**"
+    - "/tmp/agent_workspace/**"
+  allowed_write_paths:
+    - "/home/*/documents/agent_output/**"
+    - "/tmp/agent_workspace/**"

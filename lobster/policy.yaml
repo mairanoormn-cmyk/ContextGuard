@@ -1,0 +1,63 @@
+# ContextGuard — Lobster Trap Policy Rules
+# Owner: Tayyab
+# Docs: https://github.com/veea-ai/lobster-trap
+#
+# Rule evaluation: first-match-wins
+# Actions: ALLOW, DENY, LOG, QUARANTINE, RATE_LIMIT, HUMAN_REVIEW
+
+version: "1.0"
+name: "contextguard-policy"
+
+rules:
+
+  # Rule 1: Block credential exfiltration attempts
+  - name: credential-exfiltration
+    description: "Block prompts attempting to read or transmit API keys and secrets"
+    match:
+      patterns:
+        - "api[_-]?key"
+        - "secret[_-]?key"
+        - "bearer token"
+        - "database.*password"
+        - "connection.*string"
+        - "private[_-]?key"
+        - "sk-[a-zA-Z0-9]{20,}"
+    action: QUARANTINE
+    log: true
+    webhook: "http://localhost:3000/api/webhook/lobster"
+    severity: CRITICAL
+
+  # Rule 2: Block prompt injection attempts
+  - name: prompt-injection
+    description: "Block attempts to override system instructions"
+    match:
+      patterns:
+        - "ignore (previous|all|your) instructions"
+        - "disregard.*system prompt"
+        - "you are now"
+        - "jailbreak"
+        - "DAN mode"
+        - "pretend you are"
+    action: DENY
+    log: true
+    webhook: "http://localhost:3000/api/webhook/lobster"
+    severity: HIGH
+
+  # Rule 3: Log PII detection
+  - name: pii-detection
+    description: "Log and alert when personal information appears in prompts"
+    match:
+      patterns:
+        - "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+        - "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+        - "\\b\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}\\b"
+    action: LOG
+    webhook: "http://localhost:3000/api/webhook/lobster"
+    severity: MEDIUM
+
+  # Default: allow everything else
+  - name: default-allow
+    match:
+      all: true
+    action: ALLOW
+    log: false

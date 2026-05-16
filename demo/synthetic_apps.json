@@ -1,0 +1,86 @@
+[
+  {
+    "app_id": "110671459871-30f1spbu0hptbs60cb4vsmv79i7bbvqj.apps.googleusercontent.com",
+    "name": "Context.ai",
+    "publisher": "Context Technologies Inc.",
+    "scopes": ["read_email", "manage_calendar", "read_drive", "admin_sdk"],
+    "user_count": 3,
+    "is_ioc": true
+  },
+  {
+    "app_id": "gemini-workspace-addon-001",
+    "name": "Gemini for Workspace",
+    "publisher": "Google LLC",
+    "scopes": ["read_docs", "write_docs"],
+    "user_count": 45,
+    "is_ioc": false
+  },
+  {
+    "app_id": "slack-oauth-connector-002",
+    "name": "Slack",
+    "publisher": "Salesforce Inc.",
+    "scopes": ["read_email", "send_email"],
+    "user_count": 38,
+    "is_ioc": false
+  },
+  {
+    "app_id": "notion-ai-sync-003",
+    "name": "Notion AI",
+    "publisher": "Notion Labs Inc.",
+    "scopes": ["read_drive", "write_drive", "read_email"],
+    "user_count": 12,
+    "is_ioc": false
+  },
+  {
+    "app_id": "shadow-ai-tool-004",
+    "name": "QuickAI Assistant",
+    "publisher": "Unknown Publisher",
+    "scopes": ["admin_sdk", "manage_users", "read_email", "write_email", "read_drive", "write_drive"],
+    "declared_scopes": ["read_email", "read_drive"],
+    "user_count": 2,
+    "last_active": "2026-05-14T08:00:00Z",
+    "is_ioc": false
+  },
+  {
+    "app_id": "github-copilot-005",
+    "name": "GitHub Copilot",
+    "publisher": "GitHub Inc. (Microsoft)",
+    "scopes": ["read_code", "write_code"],
+    "user_count": 22,
+    "is_ioc": false
+  },
+  {
+    "app_id": "zapier-automation-006",
+    "name": "Zapier",
+    "publisher": "Zapier Inc.",
+    "scopes": ["read_email", "send_email", "read_calendar", "write_calendar"],
+    "user_count": 8,
+    "is_ioc": false
+  },
+  {
+    "app_id": "mystery-llm-007",
+    "name": "SmartDesk AI",
+    "publisher": "SmartDesk Corp.",
+    "scopes": ["admin_sdk", "read_email", "write_email", "manage_users", "read_drive"],
+    "declared_scopes": ["read_email"],
+    "user_count": 1,
+    "last_active": "2026-05-13T22:15:00Z",
+    "is_ioc": false
+  },
+  {
+    "app_id": "grammarly-008",
+    "name": "Grammarly",
+    "publisher": "Grammarly Inc.",
+    "scopes": ["read_docs"],
+    "user_count": 31,
+    "is_ioc": false
+  },
+  {
+    "app_id": "otter-ai-009",
+    "name": "Otter.ai",
+    "publisher": "AISense Inc.",
+    "scopes": ["read_calendar", "read_email"],
+    "user_count": 7,
+    "is_ioc": false
+  }
+]
